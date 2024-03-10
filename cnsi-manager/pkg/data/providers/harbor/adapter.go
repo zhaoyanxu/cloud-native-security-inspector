@@ -602,7 +602,8 @@ func (a *Adapter) GetVulnerabilitiesList(ctx context.Context, id core.ArtifactID
 		},
 		Timeout: time.Second * 10,
 	}
-	res, err := client.Do(request)
+	var res *http.Response
+	res, err = client.Do(request)
 	if err != nil {
 		log.Errorf("find vulnerabilities err: %v \n", err)
 		return nil, err

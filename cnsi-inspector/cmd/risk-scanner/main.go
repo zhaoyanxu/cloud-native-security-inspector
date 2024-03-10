@@ -50,7 +50,7 @@ func main() {
 
 	// Get the policy CR details.
 	inspectionPolicy := &v1alpha1.InspectionPolicy{}
-	if err := k8sClient.Get(ctx, client.ObjectKey{Name: policy}, inspectionPolicy); err != nil {
+	if err = k8sClient.Get(ctx, client.ObjectKey{Name: policy}, inspectionPolicy); err != nil {
 		log.Error(err, "unable to retrieve the specified inspection policy")
 		os.Exit(1)
 	}
@@ -66,7 +66,8 @@ func main() {
 		}
 
 		// get data source provider
-		provider, err := providers.NewProvider(ctx, k8sClient, setting)
+		var provider providers.Adapter
+		provider, err = providers.NewProvider(ctx, k8sClient, setting)
 		if err != nil {
 			log.Error(err, "failed to create provider")
 			os.Exit(1)

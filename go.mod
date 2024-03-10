@@ -146,6 +146,7 @@ require (
 	github.com/prometheus/common v0.39.0 // indirect
 	github.com/prometheus/procfs v0.8.0 // indirect
 	github.com/quic-go/qpack v0.4.0 // indirect
+	github.com/quic-go/qtls-go1-19 v0.3.2 // indirect
 	github.com/quic-go/qtls-go1-20 v0.3.1 // indirect
 	github.com/quic-go/quic-go v0.37.7 // indirect
 	github.com/robfig/cron v1.2.0 // indirect
@@ -202,4 +203,8 @@ require (
 	sigs.k8s.io/yaml v1.3.0 // indirect
 )
 
-replace github.com/spdx/tools-golang => github.com/spdx/tools-golang v0.3.0
+replace (
+	github.com/quic-go/qtls-go1-20 => github.com/quic-go/qtls-go1-20 v0.2.2
+	github.com/quic-go/quic-go => github.com/quic-go/quic-go v0.34.0
+	github.com/spdx/tools-golang => github.com/spdx/tools-golang v0.3.0
+)

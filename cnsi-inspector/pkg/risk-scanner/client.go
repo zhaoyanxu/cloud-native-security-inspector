@@ -23,7 +23,7 @@ func NewClient(conf *Config) *Client {
 
 // IsAnalyzeRunning get analyze status
 func (c *Client) IsAnalyzeRunning() (bool, error) {
-	requestURL := fmt.Sprintf(fmt.Sprintf("%s/status", c.conf.Server))
+	requestURL := fmt.Sprintf(fmt.Sprintf("%s/%s", c.conf.Server, RouterStatus))
 	log.Infof("get to: %s \n", requestURL)
 	res, err := http.Get(requestURL)
 	if err != nil {
@@ -45,16 +45,18 @@ func (c *Client) IsAnalyzeRunning() (bool, error) {
 
 // PostAnalyze ask server to analyze resources
 func (c *Client) PostAnalyze(a AnalyzeOption) error {
-	requestURL := fmt.Sprintf(fmt.Sprintf("%s/analyze", c.conf.Server))
+	requestURL := fmt.Sprintf(fmt.Sprintf("%s/%s", c.conf.Server, RouterAnalyze))
 	log.Infof("post to: %s \n", requestURL)
 
 	if jsonData, err := json.Marshal(a); err == nil {
-		request, error := http.NewRequest("POST", requestURL, bytes.NewBuffer(jsonData))
+		var request *http.Request
+		request, err = http.NewRequest("POST", requestURL, bytes.NewBuffer(jsonData))
 		request.Header.Set("Content-Type", "application/json; charset=UTF-8")
 
 		client := &http.Client{}
-		response, error := client.Do(request)
-		if error != nil || response.StatusCode != http.StatusCreated {
+		var response *http.Response
+		response, err = client.Do(request)
+		if err != nil || response.StatusCode != http.StatusCreated {
 			return err
 		}
 
@@ -65,7 +67,7 @@ func (c *Client) PostAnalyze(a AnalyzeOption) error {
 }
 
 func (c *Client) PostResource(a interface{}) error {
-	requestURL := fmt.Sprintf(fmt.Sprintf("%s/resource", c.conf.Server))
+	requestURL := fmt.Sprintf(fmt.Sprintf("%s/%s", c.conf.Server, RouterResource))
 	log.Infof("post to: %s \n", requestURL)
 
 	if jsonData, err := json.Marshal(a); err == nil {
@@ -73,7 +75,8 @@ func (c *Client) PostResource(a interface{}) error {
 		request.Header.Set("Content-Type", "application/json; charset=UTF-8")
 
 		client := &http.Client{}
-		response, err := client.Do(request)
+		var response *http.Response
+		response, err = client.Do(request)
 		if err != nil || response.StatusCode != http.StatusCreated {
 			return err
 		}
@@ -88,7 +91,7 @@ func (c *Client) PostResource(a interface{}) error {
 
 // SendExitInstruction send exit instruction
 func (c *Client) SendExitInstruction() error {
-	requestURL := fmt.Sprintf(fmt.Sprintf("%s/exit", c.conf.Server))
+	requestURL := fmt.Sprintf(fmt.Sprintf("%s/%s", c.conf.Server, RouterExit))
 	log.Infof("get to: %s \n", requestURL)
 	res, err := http.Get(requestURL)
 	if err != nil {

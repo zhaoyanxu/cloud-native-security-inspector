@@ -38,7 +38,7 @@ func (c *RiskController) Run(ctx context.Context, policy *v1alpha1.InspectionPol
 	viper.SetConfigName("config") // name of config file (without extension)
 	viper.AddConfigPath(cfgDir)
 	// check server is running
-	c.checkServerRunning()
+	c.checkServerIsRunning()
 
 	conf := ReadEnvConfig()
 
@@ -188,7 +188,7 @@ func (c *RiskController) CTRL() Controller {
 	return c
 }
 
-func (c *RiskController) checkServerRunning() {
+func (c *RiskController) checkServerIsRunning() {
 	conf := ReadEnvConfig()
 	httpClient := NewClient(conf)
 	for {

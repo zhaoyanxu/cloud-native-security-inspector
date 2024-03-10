@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/goharbor/harbor/src/pkg/scan/vuln"
 	"net/http"
 	"os"
 	"strings"
@@ -110,8 +111,10 @@ func (s *Server) Analyze(option AnalyzeOption) {
 		s.Clear()
 	}()
 
+	var report *vuln.Report
+	var err error
 	for _, t := range s.Images {
-		report, err := t.FetchHarborReport(s.adapter)
+		report, err = t.FetchHarborReport(s.adapter)
 		if err != nil {
 			log.Errorf("get vuln reprot error: %v", err)
 			continue
@@ -128,7 +131,7 @@ func (s *Server) Analyze(option AnalyzeOption) {
 		}
 	}
 	// export the data
-	err := s.exportRiskReport(s.Workloads.Risks)
+	err = s.exportRiskReport(s.Workloads.Risks)
 	if err != nil {
 		log.Error(err, "failed to export the risk report to exporter")
 	}
@@ -154,25 +157,25 @@ func (s *Server) constructRiskExportStruct(riskReport *types.RiskReport) *v1alph
 func (s *Server) exportRiskReport(risks riskdata.RiskCollection) error {
 	var details []types.RiskDetail
 	currentTimeData := time.Now().Format(time.RFC3339)
-	for s, items := range risks {
-		split := strings.Split(s, ":")
+	var split []string
+	for uuid, items := range risks {
+		split = strings.Split(uuid, ":")
 		if len(split) != 4 {
-			log.Error("key non-standard:" + s)
+			log.Error("key non-standard:" + uuid)
 			continue
 		}
 		kind := split[0]
 		name := split[1]
 		namespace := split[2]
 		uid := split[3]
-
-		var riskDetail types.RiskDetail
-		riskDetail.Kind = kind
-		riskDetail.Name = name
-		riskDetail.Namespace = namespace
-		riskDetail.Uid = uid
-		riskDetail.Detail = items
-		riskDetail.CreateTimestamp = currentTimeData
-		details = append(details, riskDetail)
+		details = append(details, types.RiskDetail{
+			Detail:          items,
+			Kind:            kind,
+			Name:            name,
+			Namespace:       namespace,
+			Uid:             uid,
+			CreateTimestamp: currentTimeData,
+		})
 	}
 	riskReport := &types.RiskReport{
 		ReportDetail:    details,
@@ -243,3 +246,10 @@ func (s *Server) Run(address string) {
 		panic(fmt.Sprintf("ListenAndServe err: %v", err))
 	}
 }
+
+const (
+	RouterStatus   = "status"
+	RouterAnalyze  = "analyze"
+	RouterResource = "resource"
+	RouterExit     = "exit"
+)
