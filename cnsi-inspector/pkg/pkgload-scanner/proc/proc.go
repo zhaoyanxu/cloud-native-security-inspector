@@ -86,14 +86,11 @@ func (k *ProcTool) GetContainerFromPID(pid int) (container string, err error) {
 		fileName := fmt.Sprintf("%s/%d/cgroup", k.mountPoint, pid)
 		s, err := k.getContainerFromFileV2(fileName, patternV2)
 		if err == nil && s != "" {
-			//k.Log.Debug().Msgf("k8s A getContainerFromFileV2: container: %s, error :%v", s, err)
 			return s, err
 		} else {
 			if err != nil {
 				//return "", err
-				//k.Log.Error().Msgf("k8s getContainerFromFileV2: container: %s, error :%v", s, err)
 			}
-			//k.Log.Error().Msgf("k8s C getContainerFromFileV2: container: %s, error :%v", s, err)
 		}
 	}
 
@@ -101,10 +98,8 @@ func (k *ProcTool) GetContainerFromPID(pid int) (container string, err error) {
 }
 
 var ErrNoContainerFoundForPID = errors.New("no container found for pid")
-var ErrUnknown = errors.New("unknown error")
 
 func (k *ProcTool) getContainerFromFile(fileName string, pattern *regexp.Regexp) (container string, err error) {
-	//k.Log.Debug().Msgf("getContainerFromFile() openfile:%s", fileName)
 	file, err := os.Open(fileName)
 	if err != nil {
 		return "", err
@@ -113,7 +108,7 @@ func (k *ProcTool) getContainerFromFile(fileName string, pattern *regexp.Regexp)
 	defer file.Close()
 
 	scanner := bufio.NewScanner(file)
-	if err := scanner.Err(); err != nil {
+	if err = scanner.Err(); err != nil {
 		return "", err
 	}
 
@@ -132,8 +127,6 @@ func (k *ProcTool) getContainerFromFile(fileName string, pattern *regexp.Regexp)
 	if flag {
 		template := []byte("$container")
 		var result []byte
-
-		//k.Log.Debug().Msgf("getContainerFromFile content:%s", content)
 
 		// For each match of the regex in the content.
 		for _, submatches := range pattern.FindAllSubmatchIndex([]byte(content), -1) {
@@ -159,7 +152,7 @@ func (k *ProcTool) getContainerFromFileV2(fileName string, pattern *regexp.Regex
 	defer file.Close()
 
 	scanner := bufio.NewScanner(file)
-	if err := scanner.Err(); err != nil {
+	if err = scanner.Err(); err != nil {
 		return "", nil
 	}
 
@@ -179,7 +172,6 @@ func (k *ProcTool) getContainerFromFileV2(fileName string, pattern *regexp.Regex
 		template := []byte("$container")
 		var result []byte
 
-		//k.Log.Debug().Msgf("getContainerFromFileV2 content:%s", content)
 		// For each match of the regex in the content.
 		for _, submatches := range pattern.FindAllSubmatchIndex([]byte(content), -1) {
 			// Apply the captured submatches to the template and append the output
