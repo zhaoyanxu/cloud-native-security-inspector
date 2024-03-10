@@ -36,8 +36,6 @@ type LsofInfo struct {
 }
 
 func lsofScan() ([]LsofInfo, error) {
-	//fmt.Println("lsofscanner is running...")
-
 	// Run lsof command and filter by .so files
 	cmd := exec.Command("lsof")
 	//cmd.Args = append(cmd.Args, "-d", `mem | grep \.so`)

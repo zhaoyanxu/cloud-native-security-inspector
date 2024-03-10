@@ -58,14 +58,14 @@ var (
 	cfgDir = "./cfg/"
 )
 
-func (c *PkgLoadController) Run(ctx context.Context, policy *v1alpha1.InspectionPolicy) error {
+func (p *PkgLoadController) Run(ctx context.Context, policy *v1alpha1.InspectionPolicy) error {
 	// read crontab from policy
 	if policy.Spec.Schedule == "" {
 		return errors.New("schedule is not set")
 	}
 	s := gocron.NewScheduler(time.Local)
 	// TODO: get crontab from env
-	_, err := s.Cron(policy.Spec.Schedule).Do(c.Scan, ctx, policy)
+	_, err := s.Cron(policy.Spec.Schedule).Do(p.Scan, ctx, policy)
 	if err != nil {
 		return errors.Wrap(err, "schedule scan")
 	}
@@ -73,24 +73,24 @@ func (c *PkgLoadController) Run(ctx context.Context, policy *v1alpha1.Inspection
 	return nil
 }
 
-func (c *PkgLoadController) Scan(ctx context.Context, policy *v1alpha1.InspectionPolicy) error {
-	c.mu.Lock()
-	if c.scanStatus == scanStatusRunning {
+func (p *PkgLoadController) Scan(ctx context.Context, policy *v1alpha1.InspectionPolicy) error {
+	p.mu.Lock()
+	if p.scanStatus == scanStatusRunning {
 		log.Info("scan is running, skip")
-		c.mu.Unlock()
+		p.mu.Unlock()
 		return nil
 	}
-	c.scanStatus = scanStatusRunning
-	c.mu.Unlock()
+	p.scanStatus = scanStatusRunning
+	p.mu.Unlock()
 	defer func() {
-		c.mu.Lock()
-		c.scanStatus = scanStatusDone
-		c.mu.Unlock()
+		p.mu.Lock()
+		p.scanStatus = scanStatusDone
+		p.mu.Unlock()
 	}()
-	return c.scan(ctx, policy)
+	return p.scan(ctx, policy)
 }
 
-func (c *PkgLoadController) scan(ctx context.Context, policy *v1alpha1.InspectionPolicy) error {
+func (p *PkgLoadController) scan(ctx context.Context, policy *v1alpha1.InspectionPolicy) error {
 	log.Info("start scanning!!!")
 	viper.SetConfigName("config") // name of config file (without extension)
 	viper.AddConfigPath(cfgDir)
@@ -102,7 +102,7 @@ func (c *PkgLoadController) scan(ctx context.Context, policy *v1alpha1.Inspectio
 
 	// Skip work namespace.
 	skips := []string{*policy.Spec.WorkNamespace}
-	nsl, err := c.collector.CollectNamespaces(ctx, policy.Spec.Inspection.NamespaceSelector, skips)
+	nsl, err := p.collector.CollectNamespaces(ctx, policy.Spec.Inspection.NamespaceSelector, skips)
 	if err != nil {
 		return errors.Wrap(err, "scan namespaces")
 	}
@@ -130,7 +130,7 @@ func (c *PkgLoadController) scan(ctx context.Context, policy *v1alpha1.Inspectio
 		// Get Pod and post the pod first
 		var pods corev1.PodList
 		// get only pods of current pod
-		err = c.collector.CollectOtherResource(
+		err = p.collector.CollectOtherResource(
 			ctx, corev1.LocalObjectReference{Name: ns.Name}, policy.Spec.Inspection.WorkloadSelector, &pods)
 		if err != nil {
 			log.Error(err, "list pods")
@@ -157,7 +157,7 @@ func (c *PkgLoadController) scan(ctx context.Context, policy *v1alpha1.Inspectio
 				aid := core.ParseArtifactIDFrom(targetImage, containerStatus.ImageID) // FIXME: k8s imageId may be mismatched with target image, use the right digest sha for target image
 				imageItem := data.NewImageItem(targetImage, aid)                      // FIXME: parse image id incorrectly
 				// get report of image(image -> vuln list) TODO: check image existance
-				imageHarborReport, err := imageItem.FetchHarborReport(c.adapter)
+				imageHarborReport, err := imageItem.FetchHarborReport(p.adapter)
 				if err != nil {
 					log.Error(err, "fetch harbor report")
 					continue
@@ -171,7 +171,7 @@ func (c *PkgLoadController) scan(ctx context.Context, policy *v1alpha1.Inspectio
 				log.Infof("scanning artID:%s, imageID:%s", imageItem.ArtifactID.String(), containerStatus.ImageID)
 
 				// scan pkg installed files of the image(pkg -> installed files, set using map)
-				scanReport, err := c.pkgScanner.ScanImage(ctx, imageItem.ArtifactID.String()) // TODO: use image instead
+				scanReport, err := p.pkgScanner.ScanImage(ctx, imageItem.ArtifactID.String()) // TODO: use image instead
 				if err != nil {
 					log.Error(err, "scan image pkg info")
 					continue
@@ -331,49 +331,39 @@ func NewController() *PkgLoadController {
 }
 
 // WithK8sClient sets k8s client.
-func (c *PkgLoadController) WithK8sClient(cli client.Client) *PkgLoadController {
-	c.kc = cli
-	return c
+func (p *PkgLoadController) WithK8sClient(cli client.Client) *PkgLoadController {
+	p.kc = cli
+	return p
 }
 
 // WithScheme sets runtime scheme.
-func (c *PkgLoadController) WithScheme(scheme *runtime.Scheme) *PkgLoadController {
-	c.scheme = scheme
-	return c
+func (p *PkgLoadController) WithScheme(scheme *runtime.Scheme) *PkgLoadController {
+	p.scheme = scheme
+	return p
 }
 
-func (c *PkgLoadController) WithPkgScanner(client pkgclient.PkgInfoClient) *PkgLoadController {
-	c.pkgScanner = client
-	return c
+func (p *PkgLoadController) WithPkgScanner(client pkgclient.PkgInfoClient) *PkgLoadController {
+	p.pkgScanner = client
+	return p
 }
 
 // WithAdapter sets adapter.
-func (s *PkgLoadController) WithAdapter(Adapter providers.Adapter) *PkgLoadController {
-	s.adapter = Adapter
-	return s
+func (p *PkgLoadController) WithAdapter(Adapter providers.Adapter) *PkgLoadController {
+	p.adapter = Adapter
+	return p
 }
 
 // CTRL returns PkgLoadController interface.
-func (c *PkgLoadController) CTRL() Controller {
-	c.collector = workload.NewCollector().
-		WithScheme(c.scheme).
-		UseClient(c.kc).
+func (p *PkgLoadController) CTRL() Controller {
+	p.collector = workload.NewCollector().
+		WithScheme(p.scheme).
+		UseClient(p.kc).
 		Complete()
 
 	// Mark PkgLoadController is ready.
-	c.ready = true
+	p.ready = true
 
-	return c
-}
-
-func inArray(need string, arr []string) bool {
-	for _, k := range arr {
-		if k == need {
-			return true
-		}
-	}
-
-	return false
+	return p
 }
 
 func ExportPkgloadReports(report PkgLoadReport, pl *v1alpha1.InspectionPolicy) {
